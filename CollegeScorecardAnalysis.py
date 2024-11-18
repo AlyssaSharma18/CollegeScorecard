@@ -63,6 +63,17 @@ minStudFacR = newdata['StudentFacultyRatio'].min()
 minStudFacR_row = newdata[newdata['StudentFacultyRatio'] == minStudFacR]
 print(minStudFacR_row)
 
+#Duke is number 2 5 year completion
+# Step 1: Get the top 7 rows with the highest 5-year completion rate
+top_7_completion_rate = newdata.nlargest(7, 'Completer5yrRepayRate')
+
+# Print the top 7 rows
+print(top_7_completion_rate)
+
+
+#Start The Plots
+
+
 # Plot: Bar chart of Median Earnings 10 Years After Graduation by Institution
 # Step 1: Sort data by 'MedianEarnings10Years' in descending order
 sorted_data = newdata.sort_values(by='MedianEarnings10Years', ascending=False)
@@ -85,5 +96,99 @@ plt.tight_layout()
 
 # Show plot
 plt.show()
+
+
+
+# Filter for the top 7 institutions by 'MedianEarnings10Years'
+top_7_data = newdata.nlargest(7, 'MedianEarnings10Years')
+
+# Plotting the top 7 institutions by median earnings 10 years after graduation
+plt.figure(figsize=(12, 8))
+sns.barplot(
+    x='InstitutionName',
+    y='MedianEarnings10Years',
+    data=top_7_data,
+    palette='Blues_d',
+    hue=None  # Resolve future warning by setting hue to None
+)
+
+# Customize the chart
+plt.xticks(rotation=90)
+plt.title('Top 7 Institutions by Median Earnings 10 Years After Graduation')
+plt.xlabel('Institution Name')
+plt.ylabel('Median Earnings 10 Years ($)')
+plt.tight_layout()
+
+# Show and close plot
+plt.show()
+
+
+# Filter for the 7 institutions with the lowest student-to-faculty ratio
+lowest_7_data = newdata.nsmallest(7, 'StudentFacultyRatio')
+
+# Plotting the 7 institutions with the lowest student-to-faculty ratio
+plt.figure(figsize=(12, 8))
+sns.barplot(
+    x='InstitutionName',
+    y='StudentFacultyRatio',
+    data=lowest_7_data,
+    palette='Greens_d'
+)
+
+# Customize the chart
+plt.xticks(rotation=90)
+plt.title('Top 7 Institutions with the Lowest Student-to-Faculty Ratio')
+plt.xlabel('Institution Name')
+plt.ylabel('Student-to-Faculty Ratio')
+plt.tight_layout()
+
+# Show and close plot
+plt.show()
+
+
+
+# Filter for the top 7 institutions with the highest ACT Admission score
+top_7_act_data = newdata.nlargest(7, '50thPercentileACTAdmission')
+
+# Plotting the top 7 institutions with the highest ACT Admission score
+plt.figure(figsize=(12, 8))
+sns.barplot(
+    x='InstitutionName',
+    y='50thPercentileACTAdmission',
+    data=top_7_act_data,
+    palette='Reds_d'
+)
+
+# Customize the chart
+plt.xticks(rotation=90)
+plt.title('Top 7 Institutions by 50th Percentile ACT Admission Score')
+plt.xlabel('Institution Name')
+plt.ylabel('50th Percentile ACT Score')
+plt.tight_layout()
+
+# Show and close plot
+plt.show()
+
+
+
+# Step 2: Create the bar chart
+plt.figure(figsize=(12, 8))
+sns.barplot(
+    x='InstitutionName',
+    y='Completer5yrRepayRate',
+    data=top_7_completion_rate,
+    palette='Purples_d'  # Purple color scheme
+)
+
+# Customize the chart
+plt.xticks(rotation=90)
+plt.title('Top 7 Institutions by 5-Year Completion Rate')
+plt.xlabel('Institution Name')
+plt.ylabel('5-Year Completion Rate')
+plt.tight_layout()
+
+# Show the chart
+plt.show()
+
 
 plt.close()
