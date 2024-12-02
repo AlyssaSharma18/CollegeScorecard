@@ -1,0 +1,401 @@
+# Convert debt to numeric and remove nulls
+newdata['MedianDebt'] = pd.to_numeric(newdata['MedianDebt'], errors='coerce')
+cleaned_data = newdata.dropna(subset=['MedianDebt'])
+
+# Create acronyms for institutions
+def create_acronym(name):
+   words = name.split()
+   acronym = ''.join(word[0] for word in words[:4]).upper()
+   return acronym
+
+# Get Duke and sample others
+duke_data = cleaned_data[cleaned_data['InstitutionName'].str.contains('Duke', na=False)]
+non_duke = cleaned_data[~cleaned_data['InstitutionName'].str.contains('Duke', na=False)]
+sampled_non_duke = non_duke.sample(n=24, random_state=42)
+sample_data = pd.concat([duke_data, sampled_non_duke])
+
+# Sort by net price and create acronyms
+sorted_data = sample_data.sort_values('NetPrice')
+sorted_data['Acronym'] = sorted_data['InstitutionName'].apply(create_acronym)
+
+# Create plot with larger figure size and better spacing
+plt.figure(figsize=(20, 10))
+fig, ax1 = plt.subplots(figsize=(20, 10))
+
+# Add more space at bottom for labels
+plt.subplots_adjust(bottom=0.2)
+
+# Plot median debt
+ax1.set_xlabel('Institutions', labelpad=15)
+ax1.set_ylabel('Median Student Debt After 10 Years($)', color='tab:blue')
+line1 = ax1.plot(range(len(sorted_data)), sorted_data['MedianDebt'],
+                color='tab:blue', label='Median Debt', linewidth=2)
+ax1.tick_params(axis='y', labelcolor='tab:blue')
+
+# Plot net price
+ax2 = ax1.twinx()
+ax2.set_ylabel('Net Price ($)', color='tab:red')
+line2 = ax2.plot(range(len(sorted_data)), sorted_data['NetPrice'],
+                color='tab:red', label='Net Price', linewidth=2)
+ax2.tick_params(axis='y', labelcolor='tab:red')
+
+# Add Duke indicators
+duke_index = sorted_data.index[sorted_data['InstitutionName'].str.contains('Duke')].tolist()[0]
+duke_row = sorted_data[sorted_data['InstitutionName'].str.contains('Duke')].iloc[0]
+ax1.plot(sorted_data.index.get_loc(duke_index), duke_row['MedianDebt'],
+        'go', markersize=12, label='Duke Position')
+ax2.plot(sorted_data.index.get_loc(duke_index), duke_row['NetPrice'],
+        'go', markersize=12)
+
+# Format x-axis labels with acronyms
+plt.xticks(range(len(sorted_data)), sorted_data['Acronym'],
+          rotation=45, ha='right', fontsize=8)
+
+# Add legend
+lines = line1 + line2 + [plt.Line2D([0], [0], marker='o', color='g', label='Duke Position',
+                                  markerfacecolor='g', markersize=10, linestyle='None')]
+labels = [l.get_label() for l in lines]
+ax1.legend(lines, labels, loc='upper left')
+
+plt.title('Institution Costs: Median Debt After 10 Years vs Net Price (25 Sample Institutions)',
+         pad=20, fontsize=14)
+plt.tight_layout()
+plt.show()
+
+correlation = sorted_data['MedianDebt'].corr(sorted_data['NetPrice'])
+print(f"Correlation coefficient between Median Debt and Net Price: {correlation:.3f}")
+
+# Get Duke's data
+duke_data = sorted_data[sorted_data['InstitutionName'].str.contains('Duke', na=False)].iloc[0]
+
+# Calculate difference
+net_price = duke_data['NetPrice']
+median_debt = duke_data['MedianDebt']
+difference = median_debt - net_price
+
+print(f"Duke's Net Price: ${net_price:,.2f}")
+print(f"Duke's Median Student Debt: ${median_debt:,.2f}")
+print(f"Difference (Debt - Price): ${difference:,.2f}")
+
+# Calculate difference for all institutions
+all_comparisons = newdata.copy()
+
+# Convert to numeric if not already
+all_comparisons['MedianDebt'] = pd.to_numeric(all_comparisons['MedianDebt'], errors='coerce')
+all_comparisons['NetPrice'] = pd.to_numeric(all_comparisons['NetPrice'], errors='coerce')
+
+# Calculate difference and drop rows with NaN values
+all_comparisons['Difference'] = all_comparisons['MedianDebt'] - all_comparisons['NetPrice']
+all_comparisons = all_comparisons.dropna(subset=['Difference'])
+
+# Sort by difference
+sorted_comparisons = all_comparisons.sort_values('Difference', ascending=False)
+
+# Display results
+print("Institutions Ranked by Difference between Median Debt and Net Price:")
+print("-" * 80)
+for _, row in sorted_comparisons.iterrows():
+   print(f"\nInstitution: {row['InstitutionName']}")
+   print(f"Net Price: ${row['NetPrice']:,.2f}")
+   print(f"Median Debt: ${row['MedianDebt']:,.2f}")
+   print(f"Difference (Debt - Price): ${row['Difference']:,.2f}")
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+def create_completion_histogram(newdata):
+    plt.figure(figsize=(12, 6))
+
+    # Create histogram with KDE
+    sns.histplot(data=newdata, x='CompletionRate', bins=30, kde=True)
+
+    # Calculate summary statistics
+    mean_completion = newdata['CompletionRate'].mean()
+    median_completion = newdata['CompletionRate'].median()
+
+    # Add vertical lines for mean and median
+    plt.axvline(mean_completion, color='red', linestyle='dashed', label=f'Mean: {mean_completion:.1f}%')
+    plt.axvline(median_completion, color='green', linestyle='dashed', label=f'Median: {median_completion:.1f}%')
+
+    # Customize the plot
+    plt.title('Distribution of College Completion Rates')
+    plt.xlabel('Completion Rate (%)')
+    plt.ylabel('Number of Institutions')
+    plt.legend()
+
+    # Add grid for better readability
+    plt.grid(True, alpha=0.3)
+
+    return plt
+
+# Create and display the histogram
+plot = create_completion_histogram(newdata)
+plot.show()
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+def create_completion_histogram(newdata):
+    plt.figure(figsize=(12, 6))
+
+    # Remove NaN values and get Duke's completion rate
+    clean_data = newdata.dropna(subset=['CompletionRate'])
+
+    # Verify Duke's completion rate
+    print("Duke's data:", clean_data[clean_data['InstitutionName'] == 'Duke University'])
+    duke_rate = clean_data[clean_data['InstitutionName'] == 'Duke University']['CompletionRate'].iloc[0]
+    print(f"Duke's completion rate: {duke_rate}")
+
+    # Create base histogram
+    n, bins, patches = plt.hist(clean_data['CompletionRate'], bins=30, color='lightgray', alpha=0.6)
+
+    # Find and color Duke's bin
+    for i in range(len(bins)-1):
+        if bins[i] <= duke_rate <= bins[i+1]:
+            patches[i].set_facecolor('blue')
+            patches[i].set_alpha(0.6)
+            break
+
+    # Add density curve
+    sns.kdeplot(data=clean_data, x='CompletionRate', color='black', linewidth=1)
+
+    # Add Duke's line and mean
+    plt.axvline(duke_rate, color='red', linestyle='dashed',
+                label=f'Duke: {duke_rate:.1f}%')
+    mean_completion = clean_data['CompletionRate'].mean()
+    plt.axvline(mean_completion, color='green', linestyle='dashed',
+                label=f'Mean: {mean_completion:.1f}%')
+
+    plt.title('Distribution of College Completion Rates')
+    plt.xlabel('Completion Rate (%)')
+    plt.ylabel('Number of Institutions')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    return plt
+
+plot = create_completion_histogram(newdata)
+plot.show()
+
+newdata = newdata[newdata['Completer5yrRepayRate'] != "PS"]
+newdata['Completer5yrRepayRate'] = pd.to_numeric(newdata['Completer5yrRepayRate'], errors='coerce')
+newdata.reset_index(drop=True, inplace=True)
+top_7_completion_rate = newdata.nlargest(7, 'Completer5yrRepayRate')
+
+from matplotlib.ticker import FuncFormatter
+
+print(plt.style.available)
+
+# Reset and set style globally 
+plt.style.use('seaborn-v0_8-pastel')
+
+# 1. First Graph - All Institutions (Original) - Median Earnings
+fig, ax = plt.subplots(figsize=(12, 8))
+bars = sns.barplot(
+    x='InstitutionName',
+    y='MedianEarnings10Years',
+    data=sorted_data,
+    palette='Blues_d'
+)
+plt.xticks(rotation=45, ha='right', fontsize=8)
+plt.title('Median Earnings 10 Years After Graduation\n', 
+          fontsize=16, fontweight='bold', fontfamily='serif')
+ax.yaxis.grid(True, linestyle='--', alpha=0.7)
+ax.set_axisbelow(True)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.xlabel('\nInstitution Name', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.ylabel('Median Earnings 10 Years ($)\n', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.tight_layout()
+plt.show()
+
+# 2. Top 7 - Median Earnings
+fig, ax = plt.subplots(figsize=(12, 8))
+bars = sns.barplot(
+    x='InstitutionName',
+    y='MedianEarnings10Years',
+    data=top_7_data,
+    palette='Blues_d'
+)
+plt.xticks(rotation=45, ha='right', fontsize=16)
+plt.title('Top 7 Institutions by Median Earnings\n', 
+          fontsize=16, fontweight='bold', fontfamily='serif')
+ax.yaxis.grid(True, linestyle='--', alpha=0.7)
+ax.set_axisbelow(True)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.xlabel('\nInstitution Name', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.ylabel('Median Earnings 10 Years ($)\n', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.tight_layout()
+plt.show()
+
+# 3. All Institutions - Student-Faculty Ratio
+fig, ax = plt.subplots(figsize=(12, 8))
+bars = sns.barplot(
+    x='InstitutionName',
+    y='StudentFacultyRatio',
+    data=newdata.sort_values('StudentFacultyRatio', ascending=True),
+    palette='Greens_d'
+)
+plt.xticks(rotation=45, ha='right', fontsize=8)
+plt.title('All NC Institutions by Student-to-Faculty Ratio\n', 
+          fontsize=16, fontweight='bold', fontfamily='serif')
+ax.yaxis.grid(True, linestyle='--', alpha=0.7)
+ax.set_axisbelow(True)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.xlabel('\nInstitution Name', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.ylabel('Student-to-Faculty Ratio\n', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.tight_layout()
+plt.show()
+
+# 4. Top 7 - Student-Faculty Ratio
+fig, ax = plt.subplots(figsize=(12, 8))
+bars = sns.barplot(
+    x='InstitutionName',
+    y='StudentFacultyRatio',
+    data=lowest_7_data,
+    palette='Greens_d'
+)
+plt.xticks(rotation=45, ha='right', fontsize=16)
+plt.title('Top 7 Institutions with Lowest Student-to-Faculty Ratio\n', 
+          fontsize=16, fontweight='bold', fontfamily='serif')
+ax.yaxis.grid(True, linestyle='--', alpha=0.7)
+ax.set_axisbelow(True)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.xlabel('\nInstitution Name', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.ylabel('Student-to-Faculty Ratio\n', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.tight_layout()
+plt.show()
+
+# 5. All Institutions - ACT Scores
+fig, ax = plt.subplots(figsize=(12, 8))
+bars = sns.barplot(
+    x='InstitutionName',
+    y='50thPercentileACTAdmission',
+    data=newdata.sort_values('50thPercentileACTAdmission', ascending=False),
+    palette='Reds_d'
+)
+plt.xticks(rotation=45, ha='right', fontsize=8)
+plt.title('All NC Institutions by 50th Percentile ACT Score\n', 
+          fontsize=16, fontweight='bold', fontfamily='serif')
+ax.yaxis.grid(True, linestyle='--', alpha=0.7)
+ax.set_axisbelow(True)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.xlabel('\nInstitution Name', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.ylabel('50th Percentile ACT Score\n', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.tight_layout()
+plt.show()
+
+# 6. Top 7 - ACT Scores
+fig, ax = plt.subplots(figsize=(12, 8))
+bars = sns.barplot(
+    x='InstitutionName',
+    y='50thPercentileACTAdmission',
+    data=top_7_act_data,
+    palette='Reds_d'
+)
+plt.xticks(rotation=45, ha='right', fontsize=16)
+plt.title('Top 7 Institutions by 50th Percentile ACT Score\n', 
+          fontsize=16, fontweight='bold', fontfamily='serif')
+ax.yaxis.grid(True, linestyle='--', alpha=0.7)
+ax.set_axisbelow(True)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.xlabel('\nInstitution Name', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.ylabel('50th Percentile ACT Score\n', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.tight_layout()
+plt.show()
+
+# 7. All Institutions - Completion Rate
+fig, ax = plt.subplots(figsize=(12, 8))
+bars = sns.barplot(
+    x='InstitutionName',
+    y='Completer5yrRepayRate',
+    data=newdata.sort_values('Completer5yrRepayRate', ascending=False),
+    palette='Purples_d'
+)
+plt.xticks(rotation=45, ha='right', fontsize=8)
+plt.title('All NC Institutions by 5-Year Completion Rate\n', 
+          fontsize=16, fontweight='bold', fontfamily='serif')
+ax.yaxis.grid(True, linestyle='--', alpha=0.7)
+ax.set_axisbelow(True)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.xlabel('\nInstitution Name', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.ylabel('5-Year Completion Rate (%)\n', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.tight_layout()
+plt.show()
+
+# 8. Top 7 - Completion Rate
+fig, ax = plt.subplots(figsize=(12, 8))
+bars = sns.barplot(
+    x='InstitutionName',
+    y='Completer5yrRepayRate',
+    data=top_7_completion_rate,
+    palette='Purples_d'
+)
+plt.xticks(rotation=45, ha='right', fontsize=16)
+plt.title('Top 7 Institutions by 5-Year Completion Rate\n', 
+          fontsize=16, fontweight='bold', fontfamily='serif')
+ax.yaxis.grid(True, linestyle='--', alpha=0.7)
+ax.set_axisbelow(True)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.xlabel('\nInstitution Name', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.ylabel('5-Year Completion Rate (%)\n', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.tight_layout()
+plt.show()
+
+# Set style globally 
+plt.style.use('seaborn-v0_8-pastel')
+
+# All Institutions - Repayment Rate
+fig, ax = plt.subplots(figsize=(12, 8))
+bars = sns.barplot(
+    x='InstitutionName',
+    y='Completer5yrRepayRate',
+    data=newdata.sort_values('Completer5yrRepayRate', ascending=False),
+    palette='Oranges_d'  # Using a new color palette to differentiate from other metrics
+)
+plt.xticks(rotation=45, ha='right', fontsize=8)
+plt.title('All NC Institutions by 5-Year Repayment Rate\n', 
+          fontsize=16, fontweight='bold', fontfamily='serif')
+ax.yaxis.grid(True, linestyle='--', alpha=0.7)
+ax.set_axisbelow(True)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.xlabel('\nInstitution Name', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.ylabel('5-Year Repayment Rate (%)\n', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.tight_layout()
+plt.show()
+
+# Top 7 - Repayment Rate
+# First get top 7 data
+top_7_repayment = newdata.nlargest(7, 'Completer5yrRepayRate')
+
+fig, ax = plt.subplots(figsize=(12, 8))
+bars = sns.barplot(
+    x='InstitutionName',
+    y='Completer5yrRepayRate',
+    data=top_7_repayment,
+    palette='Oranges_d'
+)
+plt.xticks(rotation=45, ha='right', fontsize=16)
+plt.title('Top 7 Institutions by 5-Year Repayment Rate\n', 
+          fontsize=16, fontweight='bold', fontfamily='serif')
+ax.yaxis.grid(True, linestyle='--', alpha=0.7)
+ax.set_axisbelow(True)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+plt.xlabel('\nInstitution Name', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.ylabel('5-Year Repayment Rate (%)\n', fontsize=10, fontweight='bold', fontfamily='serif')
+plt.tight_layout()
+plt.show()
+
